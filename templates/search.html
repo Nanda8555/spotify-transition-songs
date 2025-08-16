@@ -1,0 +1,1016 @@
+{% extends "base.html" %}
+
+{% block title %}Track Search - Spotify Smooth Transitions{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+    <h2>Track Search & Transition Generator</h2>
+    
+    <div style="margin-bottom: 30px;">
+        <h3>Search for Tracks</h3>
+        <input type="text" id="searchInput" placeholder="Search for artists, songs, albums..." 
+               style="width: 70%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px;">
+        <button onclick="searchTracks()" 
+                style="width: 25%; padding: 10px; background-color: #1DB954; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;">
+            Search
+        </button>
+    </div>
+    
+    <div style="margin-bottom: 30px;">
+        <button onclick="loadPopularTracks()" 
+                style="padding: 10px 20px; background-color: #1DB954; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">
+            Load Popular Tracks
+        </button>
+        <button onclick="loadGenres()" 
+                style="padding: 10px 20px; background-color: #1DB954; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Show Available Genres
+        </button>
+    </div>
+    
+    <div id="searchResults" style="margin-bottom: 30px;"></div>
+    
+    <div id="selectedTracks" style="margin-bottom: 30px;">
+        <h3>Selected Tracks for Transition</h3>
+        <div id="trackSelection" style="display: flex; gap: 20px;">
+            <div id="track1" style="flex: 1; padding: 15px; border: 2px dashed #ddd; border-radius: 5px; text-align: center;">
+                <p>Click a track to select as Track 1</p>
+            </div>
+            <div id="track2" style="flex: 1; padding: 15px; border: 2px dashed #ddd; border-radius: 5px; text-align: center;">
+                <p>Click a track to select as Track 2</p>
+            </div>
+        </div>
+        <button onclick="generateTransition()" id="generateBtn" 
+                style="margin-top: 15px; padding: 12px 25px; background-color: #1DB954; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-right: 10px;" 
+                disabled>
+            Generate Transition (Basic)
+        </button>
+        <button onclick="generateSmartTransition()" id="smartGenerateBtn" 
+                style="margin-top: 15px; padding: 12px 25px; background-color: #0066cc; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;" 
+                disabled>
+            🧠 Smart Transition
+        </button>
+    </div>
+    
+    <div id="recommendations" style="margin-top: 30px;"></div>
+    
+    <!-- Settings Modal -->
+    <div id="settingsModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div style="background-color: white; margin: 5% auto; padding: 30px; width: 80%; max-width: 500px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 id="settingsTitle">Track Settings</h3>
+                <button onclick="closeSettings()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">&times;</button>
+            </div>
+            
+            <div id="settingsContent">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Custom Tempo (BPM):</label>
+                    <input type="number" id="customBpm" min="60" max="200" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Speed Modifier:</label>
+                    <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 100%;">
+                    <div style="text-align: center; margin-top: 5px;">
+                        <span id="speedValue">1.0x</span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Energy Level:</label>
+                    <input type="range" id="energySlider" min="0.0" max="1.0" step="0.1" value="0.5" style="width: 100%;">
+                    <div style="text-align: center; margin-top: 5px;">
+                        <span id="energyValue">0.5</span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Notes:</label>
+                    <textarea id="trackNotes" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;" placeholder="Add custom notes about this track..."></textarea>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button onclick="closeSettings()" style="padding: 10px 20px; background-color: #ccc; color: black; border: none; border-radius: 5px; cursor: pointer;">Cancel</button>
+                    <button onclick="saveSettings()" style="padding: 10px 20px; background-color: #1DB954; color: white; border: none; border-radius: 5px; cursor: pointer;">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Preview Player Controls -->
+    <div id="previewControls" style="position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); display: none; z-index: 999; min-width: 300px;">
+        <div style="font-weight: bold; margin-bottom: 10px;">🎵 Transition Preview Player</div>
+        <div id="currentTrackInfo" style="margin-bottom: 10px; font-size: 12px; color: #666; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+        
+        <!-- Progress and time display -->
+        <div style="margin-bottom: 10px;">
+            <div id="previewProgress" style="height: 6px; background-color: #ddd; border-radius: 3px; overflow: hidden; cursor: pointer;" onclick="seekToPosition(event)">
+                <div id="progressBar" style="height: 100%; background-color: #1DB954; width: 0%; transition: width 0.1s;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 11px; color: #888;">
+                <span id="timeDisplay">0s / 30s</span>
+                <span id="playlistInfo" style="display: none;">Track 1 of 5</span>
+            </div>
+        </div>
+        
+        <!-- Control buttons -->
+        <div style="display: flex; gap: 8px; align-items: center; justify-content: center;">
+            <button onclick="playPreviousInPlaylist()" id="prevBtn" style="padding: 8px 12px; background-color: #666; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;" title="Previous track">⏮️</button>
+            <button onclick="togglePlayPause()" id="playPauseBtn" style="padding: 8px 12px; background-color: #1DB954; color: white; border: none; border-radius: 4px; cursor: pointer;" title="Play/Pause">⏸️</button>
+            <button onclick="playNextInPlaylist()" id="nextBtn" style="padding: 8px 12px; background-color: #666; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;" title="Next track">⏭️</button>
+            <button onclick="stopAllPreviews()" style="padding: 8px 12px; background-color: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer;" title="Stop">⏹️</button>
+        </div>
+        
+        <!-- Volume control -->
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
+            <span style="font-size: 12px;">🔊</span>
+            <input type="range" id="volumeSlider" min="0" max="100" value="70" onchange="adjustVolume(this.value)" style="flex: 1;" title="Volume">
+            <span id="volumeDisplay" style="font-size: 11px; color: #666; width: 30px;">70%</span>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedTracks = { track1: null, track2: null };
+
+function searchTracks() {
+    const query = document.getElementById('searchInput').value.trim();
+    if (!query) return;
+    
+    fetch(`/api/search?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            displayTracks(data.tracks || [], 'Search Results');
+        })
+        .catch(error => {
+            console.error('Search error:', error);
+            document.getElementById('searchResults').innerHTML = '<p style="color: red;">Search failed. Please try again.</p>';
+        });
+}
+
+function loadPopularTracks() {
+    console.log('Loading popular tracks...');
+    fetch('/api/popular_tracks')
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Popular tracks data:', data);
+            if (data.tracks && Array.isArray(data.tracks)) {
+                const previewInfo = data.preview_count ? ` (${data.preview_count} with previews)` : '';
+                displayTracks(data.tracks, `Popular Tracks${previewInfo}`);
+                
+                // Show preview availability info
+                if (data.preview_count > 0) {
+                    showNotification(`✅ Loaded ${data.total_count} tracks with ${data.preview_count} previews available!`, 'success');
+                } else {
+                    showNotification(`⚠️ Loaded ${data.total_count} tracks but no preview audio available`, 'info');
+                }
+            } else {
+                console.error('Invalid data structure:', data);
+                document.getElementById('searchResults').innerHTML = '<p style="color: red;">Invalid response format.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Popular tracks error:', error);
+            document.getElementById('searchResults').innerHTML = '<p style="color: red;">Failed to load popular tracks: ' + error.message + '</p>';
+        });
+}
+
+function loadGenres() {
+    fetch('/api/genres')
+        .then(response => response.json())
+        .then(data => {
+            const genres = data.genres || [];
+            let genreHtml = '<h3>Available Genres</h3><div style="display: flex; flex-wrap: wrap; gap: 10px;">';
+            genres.slice(0, 20).forEach(genre => {
+                genreHtml += `<span style="padding: 5px 10px; background-color: #f0f0f0; border-radius: 15px; font-size: 14px;">${genre}</span>`;
+            });
+            genreHtml += '</div>';
+            document.getElementById('searchResults').innerHTML = genreHtml;
+        });
+}
+
+function displayTracks(tracks, title) {
+    let html = `<h3>${title}</h3><div style="display: grid; gap: 10px;">`;
+    
+    tracks.forEach(track => {
+        // Safely escape quotes for JavaScript
+        const safeName = track.name.replace(/'/g, "\\'");
+        const safeArtist = track.artist.replace(/'/g, "\\'");
+        
+        html += `
+            <div class="track-item" onclick="selectTrack('${track.id}', '${safeName}', '${safeArtist}')" 
+                 style="display: flex; align-items: center; padding: 10px; border: 1px solid #ddd; border-radius: 5px; cursor: pointer; transition: background-color 0.2s;">
+                <div style="flex: 1;">
+                    <strong>${track.name}</strong><br>
+                    <span style="color: #666;">by ${track.artist}</span>
+                    ${track.album ? `<br><small>Album: ${track.album}</small>` : ''}
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    ${track.preview_url ? `<button onclick="event.stopPropagation(); playPreview('${track.preview_url}')" style="padding: 5px 10px; background-color: #1DB954; color: white; border: none; border-radius: 3px; cursor: pointer;">▶️</button>` : ''}
+                    <button onclick="event.stopPropagation(); getFeatures('${track.id}')" style="padding: 5px 10px; background-color: #0066cc; color: white; border: none; border-radius: 3px; cursor: pointer;">📊</button>
+                    <button onclick="event.stopPropagation(); openSettings('${track.id}', '${safeName}', '${safeArtist}')" style="padding: 5px 10px; background-color: #ff6b35; color: white; border: none; border-radius: 3px; cursor: pointer;">⚙️</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    document.getElementById('searchResults').innerHTML = html;
+}
+
+function selectTrack(id, name, artist) {
+    if (!selectedTracks.track1) {
+        selectedTracks.track1 = { id, name, artist };
+        document.getElementById('track1').innerHTML = `<strong>Track 1:</strong><br>${name}<br><small>by ${artist}</small>`;
+        document.getElementById('track1').style.borderColor = '#1DB954';
+        document.getElementById('track1').style.backgroundColor = '#f0fff0';
+    } else if (!selectedTracks.track2) {
+        selectedTracks.track2 = { id, name, artist };
+        document.getElementById('track2').innerHTML = `<strong>Track 2:</strong><br>${name}<br><small>by ${artist}</small>`;
+        document.getElementById('track2').style.borderColor = '#1DB954';
+        document.getElementById('track2').style.backgroundColor = '#f0fff0';
+        document.getElementById('generateBtn').disabled = false;
+        document.getElementById('smartGenerateBtn').disabled = false;
+    } else {
+        // Reset and select as track1
+        selectedTracks = { track1: { id, name, artist }, track2: null };
+        document.getElementById('track1').innerHTML = `<strong>Track 1:</strong><br>${name}<br><small>by ${artist}</small>`;
+        document.getElementById('track1').style.borderColor = '#1DB954';
+        document.getElementById('track1').style.backgroundColor = '#f0fff0';
+        document.getElementById('track2').innerHTML = '<p>Click a track to select as Track 2</p>';
+        document.getElementById('track2').style.borderColor = '#ddd';
+        document.getElementById('track2').style.backgroundColor = 'white';
+        document.getElementById('generateBtn').disabled = true;
+        document.getElementById('smartGenerateBtn').disabled = true;
+    }
+}
+
+function generateSmartTransition() {
+    if (!selectedTracks.track1 || !selectedTracks.track2) return;
+    
+    const requestData = {
+        track_ids: [selectedTracks.track1.id, selectedTracks.track2.id]
+    };
+    
+    document.getElementById('recommendations').innerHTML = '<p>🧠 Generating smart transition recommendations using advanced algorithms...</p>';
+    
+    fetch('/api/smart_recommendations', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.suggestions) {
+            displaySmartRecommendations(data);
+        } else {
+            document.getElementById('recommendations').innerHTML = `<p style="color: red;">Error: ${data.message || 'Failed to generate smart recommendations'}</p>`;
+        }
+    })
+    .catch(error => {
+        console.error('Smart transition generation error:', error);
+        document.getElementById('recommendations').innerHTML = '<p style="color: red;">Failed to generate smart transition. Please try again.</p>';
+    });
+}
+
+function displaySmartRecommendations(data) {
+    const { suggestions, strategies_used, total_found, preview_count } = data;
+    
+    let html = `<h3>🧠 Smart Transition Recommendations</h3>`;
+    const previewInfo = preview_count !== undefined ? ` (${preview_count} with previews)` : '';
+    html += `<p style="color: #666; margin-bottom: 15px;">Found ${total_found} tracks${previewInfo} using: <strong>${strategies_used.join(', ')}</strong></p>`;
+    
+        // Show preview availability notification with enhanced messaging
+        if (preview_count !== undefined) {
+            if (preview_count > 0) {
+                html += `<p style="color: #1DB954; font-size: 12px; margin-bottom: 15px;">✅ ${preview_count} tracks have preview audio available for testing!</p>`;
+            } else {
+                html += `<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 10px; margin-bottom: 15px; font-size: 12px;">
+                    <p style="color: #856404; margin: 0;"><strong>⚠️ Preview Audio Limitation</strong></p>
+                    <p style="color: #856404; margin: 5px 0 0 0;">Spotify's Client Credentials doesn't provide preview URLs. Use the enhanced preview system below:</p>
+                    <ul style="color: #856404; margin: 5px 0 0 20px; padding: 0;">
+                        <li>🎵 <strong>Preview Complete Transition</strong> - Simulates seamless track flow</li>
+                        <li>📄 <strong>View Playlist Details</strong> - Shows track information & Spotify links</li>
+                        <li>🔗 <strong>Open in Spotify</strong> - Play actual tracks in Spotify app</li>
+                    </ul>
+                </div>`;
+            }
+        }    // Add playlist preview button
+    const allTrackIds = [selectedTracks.track1.id, ...suggestions.map(s => s.id), selectedTracks.track2.id];
+    html += `<div style="margin-bottom: 15px;">
+        <button onclick="startTransitionPreview([${allTrackIds.map(id => `'${id}'`).join(',')}])" 
+                style="padding: 10px 20px; background-color: #1DB954; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; margin-right: 10px;">
+            🎵 Preview Complete Transition (${allTrackIds.length} tracks)
+        </button>
+        <button onclick="playPlaylistPreview([${allTrackIds.map(id => `'${id}'`).join(',')}])" 
+                style="padding: 10px 20px; background-color: #0066cc; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+            📄 View Playlist Details
+        </button>
+    </div>`;
+    
+    html += '<div style="display: grid; gap: 10px;">';
+    
+    suggestions.forEach((track, index) => {
+        const popularityStars = '★'.repeat(Math.round(track.popularity / 20));
+        // Safely escape quotes for JavaScript
+        const safeName = track.name.replace(/'/g, "\\'");
+        const safeArtist = track.artist.replace(/'/g, "\\'");
+        
+        html += `
+            <div style="display: flex; align-items: center; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9;">
+                <div style="margin-right: 15px; font-weight: bold; color: #1DB954; font-size: 18px;">${index + 1}</div>
+                <div style="flex: 1;">
+                    <strong>${track.name}</strong><br>
+                    <span style="color: #666;">by ${track.artist}</span><br>
+                    <small style="color: #888; background-color: #e8f4f8; padding: 2px 6px; border-radius: 3px; margin-top: 3px; display: inline-block;">
+                        ${track.strategy}
+                    </small>
+                    ${track.popularity ? `<span style="margin-left: 10px; color: #ff9500;">${popularityStars} (${track.popularity})</span>` : ''}
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 5px; align-items: end;">
+                    ${track.preview_url ? 
+                        `<button onclick="playPreview('${track.preview_url}', {name: '${safeName}', artist: '${safeArtist}'})" style="padding: 8px 12px; background-color: #1DB954; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">▶️ Preview</button>` : 
+                        '<span style="color: #999; font-size: 12px;">No preview</span>'
+                    }
+                    <button onclick="getFeatures('${track.id}')" style="padding: 5px 8px; background-color: #0066cc; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">📊 Info</button>
+                    <button onclick="openSettings('${track.id}', '${safeName}', '${safeArtist}')" style="padding: 5px 8px; background-color: #ff6b35; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">⚙️ Set</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    document.getElementById('recommendations').innerHTML = html;
+}
+
+function generateTransition() {
+    if (!selectedTracks.track1 || !selectedTracks.track2) return;
+    
+    const requestData = {
+        track_ids: [selectedTracks.track1.id, selectedTracks.track2.id]
+    };
+    
+    document.getElementById('recommendations').innerHTML = '<p>Generating transition recommendations...</p>';
+    
+    fetch('/api/basic_recommendations', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.suggestions) {
+            displayRecommendations(data.suggestions);
+        } else {
+            document.getElementById('recommendations').innerHTML = `<p style="color: red;">Error: ${data.message || 'Failed to generate recommendations'}</p>`;
+        }
+    })
+    .catch(error => {
+        console.error('Transition generation error:', error);
+        document.getElementById('recommendations').innerHTML = '<p style="color: red;">Failed to generate transition. Please try again.</p>';
+    });
+}
+
+function displayRecommendations(suggestions) {
+    let html = '<h3>Recommended Transition Songs</h3><div style="display: grid; gap: 10px;">';
+    
+    suggestions.forEach((track, index) => {
+        html += `
+            <div style="display: flex; align-items: center; padding: 10px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9;">
+                <div style="margin-right: 10px; font-weight: bold; color: #1DB954;">${index + 1}</div>
+                <div style="flex: 1;">
+                    <strong>${track.name}</strong><br>
+                    <span style="color: #666;">by ${track.artist}</span>
+                </div>
+                ${track.preview_url ? `<button onclick="playPreview('${track.preview_url}')" style="padding: 5px 10px; background-color: #1DB954; color: white; border: none; border-radius: 3px; cursor: pointer;">▶️ Preview</button>` : '<span style="color: #999;">No preview</span>'}
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    document.getElementById('recommendations').innerHTML = html;
+}
+
+function playPreview(url) {
+    // Simple preview player
+    const audio = new Audio(url);
+    audio.volume = 0.5;
+    audio.play().catch(error => {
+        console.error('Preview playback failed:', error);
+        alert('Preview playback not available for this track.');
+    });
+}
+
+function getFeatures(trackId) {
+    fetch(`/test_features/${trackId}`)
+        .then(response => response.json())
+        .then(data => {
+            const features = data[0];
+            if (features) {
+                alert(`Audio Features:
+Tempo: ${features.tempo} BPM
+Energy: ${features.energy}
+Danceability: ${features.danceability}
+Valence: ${features.valence}
+Acousticness: ${features.acousticness}`);
+            } else {
+                alert('No audio features available for this track.');
+            }
+        })
+        .catch(error => {
+            console.error('Features error:', error);
+            alert('Failed to get audio features.');
+        });
+}
+
+// Enhanced preview and settings management
+let currentAudio = null;
+let currentTrackSettings = {};
+let previewInterval = null;
+let currentPlaylist = [];
+let currentPlaylistIndex = 0;
+let isPlayingPlaylist = false;
+
+// Settings Modal Functions
+function openSettings(trackId, trackName, artistName) {
+    currentTrackSettings = {
+        id: trackId,
+        name: trackName.replace(/\\'/g, "'"), // Unescape quotes
+        artist: artistName.replace(/\\'/g, "'")
+    };
+    
+    document.getElementById('settingsTitle').textContent = `Settings: ${trackName} by ${artistName}`;
+    document.getElementById('settingsModal').style.display = 'block';
+    
+    // Load existing settings
+    loadTrackSettings(trackId);
+}
+
+function closeSettings() {
+    document.getElementById('settingsModal').style.display = 'none';
+    currentTrackSettings = {};
+}
+
+function loadTrackSettings(trackId) {
+    fetch(`/settings/${trackId}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('customBpm').value = data.custom_bpm || '';
+            document.getElementById('speedSlider').value = data.speed || 1.0;
+            document.getElementById('energySlider').value = data.energy || 0.5;
+            document.getElementById('trackNotes').value = data.notes || '';
+            
+            updateSpeedDisplay();
+            updateEnergyDisplay();
+        })
+        .catch(error => {
+            console.error('Failed to load settings:', error);
+        });
+}
+
+function saveSettings() {
+    const settings = {
+        track_name: currentTrackSettings.name,
+        artist_name: currentTrackSettings.artist,
+        custom_bpm: parseFloat(document.getElementById('customBpm').value) || null,
+        speed: parseFloat(document.getElementById('speedSlider').value),
+        energy: parseFloat(document.getElementById('energySlider').value),
+        tempo: parseFloat(document.getElementById('customBpm').value) || null, // Use custom BPM as tempo if set
+        notes: document.getElementById('trackNotes').value
+    };
+    
+    fetch(`/settings/${currentTrackSettings.id}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'saved') {
+            showNotification('Settings saved successfully!', 'success');
+            closeSettings();
+            
+            // Store in localStorage as backup
+            const localSettings = JSON.parse(localStorage.getItem('spotifyTrackSettings') || '{}');
+            localSettings[currentTrackSettings.id] = settings;
+            localStorage.setItem('spotifyTrackSettings', JSON.stringify(localSettings));
+        } else {
+            showNotification('Failed to save settings', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Save settings error:', error);
+        showNotification('Failed to save settings', 'error');
+    });
+}
+
+function updateSpeedDisplay() {
+    const speedValue = document.getElementById('speedSlider').value;
+    document.getElementById('speedValue').textContent = speedValue + 'x';
+}
+
+function updateEnergyDisplay() {
+    const energyValue = document.getElementById('energySlider').value;
+    document.getElementById('energyValue').textContent = energyValue;
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    const colors = {
+        'success': '#1DB954',
+        'error': '#ff4444', 
+        'info': '#0066cc'
+    };
+    
+    notification.style.cssText = `
+        position: fixed; top: 20px; right: 20px; z-index: 1001;
+        padding: 15px 20px; border-radius: 5px; color: white; font-weight: bold;
+        background-color: ${colors[type] || colors['info']};
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        max-width: 300px; word-wrap: break-word;
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (document.body.contains(notification)) {
+            document.body.removeChild(notification);
+        }
+    }, 3000);
+}
+
+// Enhanced Preview Functions with Transition Support
+
+function playPreview(url, trackInfo = null) {
+    stopAllPreviews(); // Stop any currently playing preview
+    
+    if (!url) {
+        showNotification('No preview available for this track', 'error');
+        return;
+    }
+    
+    currentAudio = new Audio(url);
+    currentAudio.volume = 0.7;
+    
+    // Show preview controls
+    const previewControls = document.getElementById('previewControls');
+    if (previewControls) {
+        previewControls.style.display = 'block';
+        const trackInfoElement = document.getElementById('currentTrackInfo');
+        if (trackInfoElement) {
+            trackInfoElement.textContent = trackInfo ? `🎵 ${trackInfo.name} by ${trackInfo.artist}` : 'Playing preview...';
+        }
+        
+        // Update playlist info if playing as part of playlist
+        updatePlaylistInfo();
+    }
+    
+    // Reset play/pause button
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    if (playPauseBtn) {
+        playPauseBtn.textContent = '⏸️';
+    }
+    
+    // Update progress bar
+    currentAudio.addEventListener('timeupdate', updateProgress);
+    currentAudio.addEventListener('ended', () => {
+        if (isPlayingPlaylist && currentPlaylistIndex < currentPlaylist.length - 1) {
+            // Auto-play next track in playlist preview
+            setTimeout(() => playNextInPlaylist(), 1000);
+        } else {
+            stopAllPreviews();
+        }
+    });
+    
+    currentAudio.play().catch(error => {
+        console.error('Preview playback failed:', error);
+        showNotification('Preview playback failed', 'error');
+        stopAllPreviews();
+    });
+}
+
+function stopAllPreviews() {
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+    }
+    
+    if (previewInterval) {
+        clearInterval(previewInterval);
+        previewInterval = null;
+    }
+    
+    isPlayingPlaylist = false;
+    currentPlaylistIndex = 0;
+    
+    const previewControls = document.getElementById('previewControls');
+    if (previewControls) {
+        previewControls.style.display = 'none';
+    }
+    
+    const progressBar = document.getElementById('progressBar');
+    if (progressBar) {
+        progressBar.style.width = '0%';
+    }
+}
+
+function updateProgress() {
+    if (currentAudio && currentAudio.duration) {
+        const progress = (currentAudio.currentTime / currentAudio.duration) * 100;
+        const progressBar = document.getElementById('progressBar');
+        if (progressBar) {
+            progressBar.style.width = progress + '%';
+        }
+        
+        // Update time display
+        const currentTime = Math.floor(currentAudio.currentTime);
+        const totalTime = Math.floor(currentAudio.duration);
+        const timeDisplay = document.getElementById('timeDisplay');
+        if (timeDisplay) {
+            timeDisplay.textContent = `${currentTime}s / ${totalTime}s`;
+        }
+    }
+}
+
+function playNextInPlaylist() {
+    if (currentPlaylistIndex < currentPlaylist.length - 1) {
+        currentPlaylistIndex++;
+        const nextTrack = currentPlaylist[currentPlaylistIndex];
+        if (nextTrack.preview_url) {
+            showNotification(`▶️ ${nextTrack.name}`, 'success');
+            playPreview(nextTrack.preview_url, {
+                name: nextTrack.name,
+                artist: nextTrack.artist
+            });
+        } else {
+            // Skip tracks without preview
+            showNotification(`⏭️ Skipping: ${nextTrack.name} (no preview)`, 'info');
+            setTimeout(() => playNextInPlaylist(), 1000);
+        }
+    } else {
+        // End of playlist
+        showNotification('🎉 Transition preview complete!', 'success');
+        stopAllPreviews();
+    }
+}
+
+function playPreviousInPlaylist() {
+    if (currentPlaylistIndex > 0) {
+        currentPlaylistIndex--;
+        const prevTrack = currentPlaylist[currentPlaylistIndex];
+        if (prevTrack.preview_url) {
+            showNotification(`⏮️ ${prevTrack.name}`, 'success');
+            playPreview(prevTrack.preview_url, {
+                name: prevTrack.name,
+                artist: prevTrack.artist
+            });
+        } else {
+            // Skip tracks without preview
+            showNotification(`⏮️ Skipping: ${prevTrack.name} (no preview)`, 'info');
+            setTimeout(() => playPreviousInPlaylist(), 1000);
+        }
+    }
+}
+
+function togglePlayPause() {
+    if (currentAudio) {
+        if (currentAudio.paused) {
+            currentAudio.play();
+            document.getElementById('playPauseBtn').textContent = '⏸️';
+        } else {
+            currentAudio.pause();
+            document.getElementById('playPauseBtn').textContent = '▶️';
+        }
+    }
+}
+
+function adjustVolume(volume) {
+    if (currentAudio) {
+        currentAudio.volume = volume / 100;
+    }
+    document.getElementById('volumeDisplay').textContent = volume + '%';
+}
+
+function seekToPosition(event) {
+    if (currentAudio && currentAudio.duration) {
+        const progressBar = event.target;
+        const rect = progressBar.getBoundingClientRect();
+        const clickX = event.clientX - rect.left;
+        const width = rect.width;
+        const seekTime = (clickX / width) * currentAudio.duration;
+        currentAudio.currentTime = seekTime;
+    }
+}
+
+function updatePlaylistInfo() {
+    const playlistInfo = document.getElementById('playlistInfo');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    
+    if (isPlayingPlaylist && currentPlaylist.length > 1) {
+        playlistInfo.style.display = 'block';
+        playlistInfo.textContent = `Track ${currentPlaylistIndex + 1} of ${currentPlaylist.length}`;
+        
+        prevBtn.style.display = currentPlaylistIndex > 0 ? 'block' : 'none';
+        nextBtn.style.display = currentPlaylistIndex < currentPlaylist.length - 1 ? 'block' : 'none';
+    } else {
+        playlistInfo.style.display = 'none';
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+    }
+}
+
+// Enhanced Transition Preview Functions with Simulation Support
+function startTransitionPreview(trackIds) {
+    fetch('/api/playlist_preview', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ track_ids: trackIds })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.playlist) {
+            // Check if we need simulation mode
+            if (data.simulation_mode || data.tracks_with_preview === 0) {
+                // No preview URLs available - start simulation
+                startPreviewSimulation(data.playlist);
+                showNotification(`Preview simulation: ${data.playlist.length} tracks (no preview URLs available)`, 'info');
+            } else {
+                // Use actual preview system
+                currentPlaylist = data.playlist;
+                currentPlaylistIndex = 0;
+                isPlayingPlaylist = true;
+                
+                // Find first track with preview
+                let startIndex = 0;
+                while (startIndex < currentPlaylist.length && !currentPlaylist[startIndex].preview_url) {
+                    startIndex++;
+                }
+                
+                if (startIndex < currentPlaylist.length) {
+                    currentPlaylistIndex = startIndex;
+                    const firstTrack = currentPlaylist[startIndex];
+                    showNotification(`Starting transition preview: ${data.tracks_with_preview} tracks with audio`, 'success');
+                    
+                    updateAudioPlayer(firstTrack);
+                    showAudioControls();
+                } else {
+                    // Fallback to simulation
+                    startPreviewSimulation(data.playlist);
+                    showNotification(`Preview simulation: No audio previews available`, 'warning');
+                }
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error starting preview:', error);
+        showNotification('Error starting preview: ' + error.message, 'error');
+    });
+}
+
+function startPreviewSimulation(playlist) {
+    // Create enhanced simulation overlay
+    let simulationContainer = document.getElementById('previewSimulationContainer');
+    if (!simulationContainer) {
+        simulationContainer = document.createElement('div');
+        simulationContainer.id = 'previewSimulationContainer';
+        simulationContainer.style.cssText = `
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 400px; max-width: 90vw; background: linear-gradient(135deg, #1DB954, #1ed760);
+            border-radius: 15px; padding: 25px; color: white; z-index: 2000;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        `;
+        document.body.appendChild(simulationContainer);
+    }
+    
+    simulationContainer.innerHTML = `
+        <div style="text-align: center;">
+            <h2 style="margin: 0 0 15px 0; font-size: 20px;">🎵 Transition Preview Simulation</h2>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0 0 20px 0; line-height: 1.4;">
+                Simulating your ${playlist.length}-track transition flow.<br>
+                <small style="opacity: 0.7;">Spotify's Client Credentials API doesn't provide preview URLs</small>
+            </p>
+            
+            <div id="simulationProgress" style="background: rgba(255,255,255,0.2); border-radius: 10px; height: 8px; margin: 20px 0; position: relative;">
+                <div id="simulationProgressBar" style="background: white; height: 100%; border-radius: 10px; width: 0%; transition: width 0.8s ease;"></div>
+            </div>
+            
+            <div id="simulationCurrentTrack" style="font-size: 16px; font-weight: bold; margin: 20px 0; min-height: 40px; display: flex; align-items: center; justify-content: center;"></div>
+            
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                <button onclick="stopPreviewSimulation()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 13px;">
+                    ⏹️ Stop Simulation
+                </button>
+                <button onclick="openPlaylistInSpotify()" style="background: rgba(255,255,255,0.9); border: none; color: #1DB954; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold;">
+                    🔗 Open in Spotify
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Start the simulation
+    simulatePlaylistTransition(playlist);
+}
+
+function simulatePlaylistTransition(playlist) {
+    let currentTrackIndex = 0;
+    const progressBar = document.getElementById('simulationProgressBar');
+    const currentTrackDiv = document.getElementById('simulationCurrentTrack');
+    
+    function updateSimulation() {
+        if (currentTrackIndex >= playlist.length) {
+            // Simulation complete
+            setTimeout(() => {
+                const container = document.getElementById('previewSimulationContainer');
+                if (container) {
+                    container.innerHTML = `
+                        <div style="text-align: center;">
+                            <h2 style="margin: 0 0 15px 0; color: #ffffff;">✅ Transition Complete!</h2>
+                            <p style="font-size: 14px; opacity: 0.9; margin: 0 0 20px 0;">
+                                Your ${playlist.length}-track transition simulation completed successfully.
+                            </p>
+                            <p style="font-size: 12px; opacity: 0.7; margin: 0 0 20px 0;">
+                                To hear the actual tracks, click "Open in Spotify" or visit each track individually.
+                            </p>
+                            <div style="display: flex; gap: 10px; justify-content: center;">
+                                <button onclick="document.getElementById('previewSimulationContainer').remove()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                                    ✨ Close
+                                </button>
+                                <button onclick="openPlaylistInSpotify()" style="background: rgba(255,255,255,0.9); border: none; color: #1DB954; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                                    🎧 Open Playlist
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }, 1000);
+            return;
+        }
+        
+        const track = playlist[currentTrackIndex];
+        const progress = (currentTrackIndex / playlist.length) * 100;
+        
+        progressBar.style.width = progress + '%';
+        currentTrackDiv.innerHTML = `
+            <div>
+                <div style="font-size: 14px; font-weight: bold;">${track.name}</div>
+                <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;">${track.artist}</div>
+                <div style="font-size: 11px; opacity: 0.6; margin-top: 5px;">Track ${currentTrackIndex + 1} of ${playlist.length}</div>
+            </div>
+        `;
+        
+        currentTrackIndex++;
+        
+        // Continue simulation
+        const simulationTimeout = setTimeout(updateSimulation, 2500); // 2.5 seconds per track
+        window.currentSimulationTimeout = simulationTimeout;
+    }
+    
+    updateSimulation();
+}
+
+function stopPreviewSimulation() {
+    if (window.currentSimulationTimeout) {
+        clearTimeout(window.currentSimulationTimeout);
+    }
+    const container = document.getElementById('previewSimulationContainer');
+    if (container) {
+        container.remove();
+    }
+}
+
+function openPlaylistInSpotify() {
+    // For now, open the first track
+    if (currentPlaylist && currentPlaylist.length > 0) {
+        const firstTrack = currentPlaylist[0];
+        const spotifyUrl = `https://open.spotify.com/track/${firstTrack.id}`;
+        window.open(spotifyUrl, '_blank');
+        showNotification('Opening first track in Spotify - you can navigate to others from there!', 'success');
+    }
+}
+
+function playPlaylistPreview(trackIds) {
+    fetch('/api/playlist_preview', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ track_ids: trackIds })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.playlist) {
+            createPlaylistPlayer(data);
+        } else {
+            showNotification('Failed to create playlist preview', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Playlist preview error:', error);
+        showNotification('Failed to create playlist preview', 'error');
+    });
+}
+
+function createPlaylistPlayer(playlistData) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%;
+        background-color: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center;
+    `;
+    
+    const player = document.createElement('div');
+    player.style.cssText = `
+        background: white; padding: 30px; border-radius: 15px; max-width: 80%; max-height: 80%;
+        overflow-y: auto; box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    `;
+    
+    let html = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>🎵 Playlist Preview</h2>
+            <button onclick="document.body.removeChild(this.closest('div').parentElement)" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+        </div>
+        <p>Total tracks: ${playlistData.total_tracks} | With preview: ${playlistData.tracks_with_preview} | Duration: ${playlistData.estimated_duration}</p>
+    `;
+    
+    playlistData.playlist.forEach((track, index) => {
+        const hasSettings = track.custom_settings && (track.custom_settings.tempo || track.custom_settings.speed || track.custom_settings.custom_bpm);
+        html += `
+            <div style="display: flex; align-items: center; padding: 10px; border: 1px solid #eee; margin-bottom: 5px; border-radius: 5px;">
+                <div style="margin-right: 10px; font-weight: bold; color: #1DB954;">${index + 1}</div>
+                <div style="flex: 1;">
+                    <strong>${track.name}</strong><br>
+                    <small style="color: #666;">by ${track.artist}</small>
+                    ${hasSettings ? '<br><span style="background: #e8f4f8; padding: 2px 6px; border-radius: 3px; font-size: 11px;">⚙️ Custom settings</span>' : ''}
+                </div>
+                <div>
+                    ${track.preview_url ? 
+                        `<button onclick="playPreview('${track.preview_url}', {name: '${track.name}', artist: '${track.artist}'})" style="padding: 8px 12px; background-color: #1DB954; color: white; border: none; border-radius: 5px; cursor: pointer;">▶️ Play</button>` : 
+                        '<span style="color: #999;">No preview</span>'
+                    }
+                </div>
+            </div>
+        `;
+    });
+    
+    player.innerHTML = html;
+    modal.appendChild(player);
+    document.body.appendChild(modal);
+}
+
+// Event listeners for sliders
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchTracks();
+            }
+        });
+    }
+    
+    // Add event listeners for modal sliders if they exist
+    const speedSlider = document.getElementById('speedSlider');
+    const energySlider = document.getElementById('energySlider');
+    
+    if (speedSlider) {
+        speedSlider.addEventListener('input', updateSpeedDisplay);
+    }
+    
+    if (energySlider) {
+        energySlider.addEventListener('input', updateEnergyDisplay);
+    }
+    
+    // Close modal when clicking outside
+    const modal = document.getElementById('settingsModal');
+    if (modal) {
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                closeSettings();
+            }
+        });
+    }
+    
+    // Load any existing settings from localStorage as backup
+    loadLocalSettings();
+});
+
+function loadLocalSettings() {
+    const localSettings = JSON.parse(localStorage.getItem('spotifyTrackSettings') || '{}');
+    console.log('Loaded local settings for', Object.keys(localSettings).length, 'tracks');
+}
+</script>
+{% endblock %}

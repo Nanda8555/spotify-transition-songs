@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - Spotify Smooth Transitions{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin-top: 50px;">
+    <h2>Welcome to Spotify Smooth Transitions</h2>
+    <p>Create perfect playlist transitions between your favorite songs</p>
+    
+    <div style="margin: 40px 0;">
+        <a href="/search" style="display: inline-block; background-color: #1DB954; color: white; padding: 15px 30px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 18px; margin-right: 15px;">
+            🎵 Start Creating Transitions
+        </a>
+        <div style="display: inline-block; background-color: #1DB954; color: white; padding: 15px 30px; border-radius: 30px; font-weight: bold; font-size: 18px;">
+            ✅ No Login Required
+        </div>
+    </div>
+    
+    <div style="max-width: 600px; margin: 0 auto; text-align: left;">
+        <h3>How it works:</h3>
+        <ol>
+            <li>Search for tracks using our API</li>
+            <li>Select two tracks to create transitions between</li>
+            <li>Get AI-powered song recommendations that create smooth transitions</li>
+            <li>Listen to preview snippets of recommended songs</li>
+            <li>Customize tempo and speed settings for each song</li>
+        </ol>
+        
+        <h3>Available Features:</h3>
+        <ul>
+            <li><a href="/api/search?q=drake" style="color: #1DB954;">🔍 Search Tracks</a></li>
+            <li><a href="/api/popular_tracks" style="color: #1DB954;">🎵 Popular Tracks</a></li>
+            <li><a href="/api/genres" style="color: #1DB954;">🎼 Available Genres</a></li>
+            <li><a href="/api/status" style="color: #1DB954;">✅ API Status</a></li>
+        </ul>
+        
+        <h3>Try these examples:</h3>
+        <ul>
+            <li><a href="/test_features/6DCZcSspjsKoFjzjrWoCdn" style="color: #1DB954;">🎯 Get Audio Features for "God's Plan" by Drake</a></li>
+            <li><a href="/preview/6DCZcSspjsKoFjzjrWoCdn" style="color: #1DB954;">🎧 Get Preview URL</a></li>
+        </ul>
+    </div>
+    
+    <div style="margin-top: 40px; padding: 20px; background-color: #f0f0f0; border-radius: 10px;">
+        <h3>API Usage Examples:</h3>
+        <p><strong>Search for tracks:</strong><br>
+        <code>GET /api/search?q=your_search_term</code></p>
+        
+        <p><strong>Get song recommendations:</strong><br>
+        <code>POST /transition_between</code><br>
+        <small>Body: {"track_ids": ["track_id_1", "track_id_2"]}</small></p>
+        
+        <p><strong>Get audio features:</strong><br>
+        <code>GET /test_features/track_id</code></p>
+    </div>
+</div>
+
+<script>
+// Add some interactivity
+document.addEventListener('DOMContentLoaded', function() {
+    // Test connection on page load
+    fetch('/api/status')
+        .then(response => response.json())
+        .then(data => {
+            const statusDiv = document.createElement('div');
+            statusDiv.style.cssText = 'position: fixed; top: 10px; right: 10px; padding: 10px; border-radius: 5px; font-weight: bold;';
+            if (data.status === 'connected') {
+                statusDiv.style.backgroundColor = '#d4edda';
+                statusDiv.style.color = '#155724';
+                statusDiv.textContent = '✅ Spotify API Connected';
+            } else {
+                statusDiv.style.backgroundColor = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusDiv.textContent = '❌ API Error';
+            }
+            document.body.appendChild(statusDiv);
+        })
+        .catch(error => {
+            console.error('Status check failed:', error);
+        });
+});
+</script>
+{% endblock %}
